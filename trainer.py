@@ -1,6 +1,6 @@
 import vgg
 import tensorflow as tf
-from scipy.misc import imread, imsave
+from scipy.misc import imread, imsave, imresize
 import numpy as np
 import logging
 import argparse
@@ -99,6 +99,10 @@ class StyleTransform:
         image = np.clip(image, 0, 255).astype(np.uint8)
         imsave(filename, image)
 
+def reshape(image, short_edge = 600):
+    height, width = image.shape[:2]
+    fraction = float(short_edge) / min(height, width)
+    return imresize(image, fraction, interp='cubic')
 
 if __name__ == '__main__':
     logging.basicConfig(format='[%(asctime)s]%(levelname)s %(message)s',
@@ -109,6 +113,7 @@ if __name__ == '__main__':
     parser.add_argument('--style', type=str, default="examples/1-style.jpg")
     parser.add_argument('--output', type=str, default='result.jpg')
     parser.add_argument('--iterations', type=int, default=2000)
+    parser.add_argument('--reshape', action='store_true')
 
     args = parser.parse_args()
 
@@ -117,6 +122,10 @@ if __name__ == '__main__':
 
     style_path = args.style
     style_image = imread(style_path).astype(np.float32)
+
+    if args.reshape:
+        content_image = reshape(content_image)
+        style_image = reshape(style_image)
 
     model = StyleTransform(content_image, style_image)
     model.train(args.iterations, learning_rate = 2, logging_iterations = 50)
