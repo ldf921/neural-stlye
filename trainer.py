@@ -3,6 +3,7 @@ import tensorflow as tf
 from scipy.misc import imread, imsave
 import numpy as np
 import logging
+import argparse
 
 class StyleTransform:
 
@@ -90,7 +91,7 @@ class StyleTransform:
                 subloss_str = ', '.join(['%s = %.4e' % (k, subloss[k]) for k in ['content', 'style', 'regular']])
 
                 logging.debug('Iteration %d / %d: %s' % (i + 1, num_iterations, subloss_str) )
-                self.export('img/result-%d.jpg' % (i + 1))
+                # self.export('img/result-%d.jpg' % (i + 1))
 
     def export(self, filename):
         image = self.sess.run(self.output)
@@ -103,11 +104,20 @@ if __name__ == '__main__':
     logging.basicConfig(format='[%(asctime)s]%(levelname)s %(message)s',
         level=logging.DEBUG)
 
-    content_path = "examples/1-content.jpg"
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--content', type=str, default="examples/1-content.jpg")
+    parser.add_argument('--style', type=str, default="examples/1-style.jpg")
+    parser.add_argument('--output', type=str, default='result.jpg')
+    parser.add_argument('--iterations', type=int, default=2000)
+
+    args = parser.parse_args()
+
+    content_path = args.content
     content_image = imread(content_path).astype(np.float32)
 
-    style_path = "examples/1-style.jpg"
+    style_path = args.style
     style_image = imread(style_path).astype(np.float32)
 
-    s = StyleTransform(content_image, style_image)
-    s.train(1000, logging_iterations = 50)
+    model = StyleTransform(content_image, style_image)
+    model.train(args.iterations, learning_rate = 2, logging_iterations = 50)
+    model.export(args.output)
