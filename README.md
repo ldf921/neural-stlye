@@ -17,7 +17,7 @@ python3 trainer.py --content examples/1-content.jpg --style examples/1-style.jpg
 ### Example Otaru
 This example image is taken by me at Otaru, Japan. 
 ```bash
-python3 trainer.py --content examples/otaru.jpg --style examples/1-style.jpg --output result.jpg --iterations 2000
+python3 trainer.py --content examples/otaru.jpg --style examples/1-style.jpg --output examples/otaru-style.jpg --iterations 2000 --reshape
 ```
 
 ## Requirements
