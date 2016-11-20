@@ -4,7 +4,12 @@ This project follows the [implmentation](https://github.com/anishathalye/neural-
 
 ## Running
 
-`python3 trainer.py --content <content file> --styles <style file> --output <output file>`
+`python3 trainer.py --content <content file> --style <style file> --output <output file> --iterations <number of iterations>`
+
+### Example 
+```bash
+python3 trainer.py --content examples/1-content.jpg --style examples/1-style.jpg --output result.jpg --iterations 2000
+```
 
 ## Requirements
 
