@@ -20,6 +20,8 @@ This example image is taken by me at Otaru, Japan.
 python3 trainer.py --content examples/otaru.jpg --style examples/1-style.jpg --output examples/otaru-style.jpg --iterations 2000 --reshape
 ```
 
+![output](examples/otaru-style.jpg)
+
 ## Requirements
 
 * python3
