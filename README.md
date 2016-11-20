@@ -4,7 +4,12 @@ This project follows the [implmentation](https://github.com/anishathalye/neural-
 
 ## Running
 
-`python3 trainer.py --content <content file> --styles <style file> --output <output file>`
+`python3 trainer.py --content <content file> --style <style file> --output <output file> --iterations <number of iterations>`
+
+### Example 
+```bash
+python3 trainer.py --content examples/1-content.jpg --style examples/1-style.jpg --output result.jpg --iterations 2000
+```
 
 ## Requirements
 
@@ -19,3 +24,12 @@ This project follows the [implmentation](https://github.com/anishathalye/neural-
 
 Copyright (c) 2015-2016 Dingfeng, Liu. Released under GPLv3. See
 [LICENSE.txt][license] for details.
+
+[net]: http://www.vlfeat.org/matconvnet/models/beta16/imagenet-vgg-verydeep-19.mat
+[paper]: http://arxiv.org/pdf/1508.06576v2.pdf
+[l-bfgs]: https://en.wikipedia.org/wiki/Limited-memory_BFGS
+[adam]: http://arxiv.org/abs/1412.6980
+[ad]: https://en.wikipedia.org/wiki/Automatic_differentiation
+[lengstrom-fast-style-transfer]: https://github.com/lengstrom/fast-style-transfer
+[fast-neural-style]: https://arxiv.org/pdf/1603.08155v1.pdf
+[license]: LICENSE.txt
