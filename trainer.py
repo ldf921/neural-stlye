@@ -4,12 +4,28 @@ from scipy.misc import imread, imsave, imresize
 import numpy as np
 import logging
 import argparse
+from sklearn.decomposition import PCA
+
+class TensorPCA(PCA):
+    def transform_tensor(self, X):
+        ''' X : [n_samples, channels]
+        mean_ : [channels]
+        componenets_ : [n_components, channels]
+        '''
+        if self.mean_ is not None:
+            X = X - np.expand_dims(self.mean_, axis=0)
+        X_transformed = tf.matmul(X, self.components_.astype(np.float32), transpose_b=True)
+        if self.whiten:
+            # X_transformed /= np.sqrt(self.explained_variance_)
+            raise NotImplementedError
+        return X_transformed
 
 class StyleTransform:
 
     content_layer = 'relu4_2'
     style_layers = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')
     kwargs_list = ('loss_weight')
+    pca = True
     loss_weight = {
         'content' : 1,
         'style' : 50,
@@ -25,7 +41,20 @@ class StyleTransform:
         with tf.Graph().as_default():
             image = tf.placeholder(tf.float32, shape=(1, None, None, 3))
             net, self.mean_pixel = vgg.net(network_path, image)
-            style_grams = [ self.opr_gram(net[layer]) for layer in self.style_layers]
+
+            self.style_feat_pca = dict()
+            if self.pca:
+                with tf.Session() as sess:
+                    style_feats = sess.run([net[layer] for layer in self.style_layers], feed_dict={image : self.preprocess(style_image)})
+                for layer, feats in zip(self.style_layers, style_feats):
+                    # [1, H, W, C]
+                    print(feats.shape)
+                    channels = feats.shape[3]
+                    model = TensorPCA(n_components=int(channels ** (5.0 / 6)))
+                    model.fit(np.reshape(feats, [-1, channels]))
+                    self.style_feat_pca[layer] = model
+
+            style_grams = [ self.opr_gram(net[layer], layer) for layer in self.style_layers]
 
             with tf.Session() as sess:
                 content_feat = sess.run(net[self.content_layer], feed_dict={image : self.preprocess(content_image)})
@@ -46,7 +75,7 @@ class StyleTransform:
             generate_content_feat = net[self.content_layer]
             self.subloss['content'] = self.opr_l2_loss(generate_content_feat - content_feat) / tf.cast(tf.shape(content_feat)[3], tf.float32)
 
-            generate_style_feats = [ self.opr_gram(net[layer]) for layer in self.style_layers]
+            generate_style_feats = [ self.opr_gram(net[layer], layer) for layer in self.style_layers]
             self.subloss['style'] = sum( map(lambda x, y: self.opr_l2_loss(x - y, normed=True), generate_style_feats, style_feats) )
 
             self.subloss['regular'] = self.opr_l2_loss(image[:, 1 :] - image[:, :-1]) + self.opr_l2_loss(image[:, :, 1:] - image[:, :, :-1])
@@ -70,8 +99,12 @@ class StyleTransform:
     def unprocess(self, image):
         return vgg.unprocess(image, self.mean_pixel)[0]
 
-    def opr_gram(self, vin):
+    def opr_gram(self, vin, layer):
+
         vin = tf.reshape(vin, [-1, tf.shape(vin)[3] ] )
+        if layer in self.style_feat_pca:
+            vin = self.style_feat_pca[layer].transform_tensor(vin)
+        
         vout = tf.matmul(vin, vin, transpose_a=True)
         return vout
 
@@ -79,7 +112,7 @@ class StyleTransform:
         reduce_opr = tf.reduce_mean if normed else tf.reduce_sum
         return reduce_opr(vin ** 2)
 
-    def train(self, num_iterations, learning_rate = 1, logging_iterations = 10):
+    def train(self, num_iterations, learning_rate = 1, logging_iterations = 10, dump_image = False):
         logging.info('Start training with learing_rate = {}'.format(learning_rate))
 
         for i in range(num_iterations):
@@ -91,7 +124,8 @@ class StyleTransform:
                 subloss_str = ', '.join(['%s = %.4e' % (k, subloss[k]) for k in ['content', 'style', 'regular']])
 
                 logging.debug('Iteration %d / %d: %s' % (i + 1, num_iterations, subloss_str) )
-                # self.export('img/result-%d.jpg' % (i + 1))
+                if dump_image:
+                    self.export('img2/result-%d.jpg' % (i + 1))
 
     def export(self, filename):
         image = self.sess.run(self.output)
@@ -114,6 +148,7 @@ if __name__ == '__main__':
     parser.add_argument('--output', type=str, default='result.jpg')
     parser.add_argument('--iterations', type=int, default=2000)
     parser.add_argument('--reshape', action='store_true')
+    parser.add_argument('--dump', action='store_true')
 
     args = parser.parse_args()
 
@@ -128,5 +163,5 @@ if __name__ == '__main__':
         style_image = reshape(style_image)
 
     model = StyleTransform(content_image, style_image)
-    model.train(args.iterations, learning_rate = 2, logging_iterations = 50)
+    model.train(args.iterations, learning_rate = 2, logging_iterations = 50, dump_image=args.dump)
     model.export(args.output)
