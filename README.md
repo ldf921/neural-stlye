@@ -9,16 +9,18 @@ This project follows the [implmentation](https://github.com/anishathalye/neural-
 ### Example 1
 This example image is provided by Anish Athalye.
 ```bash
-python3 trainer.py --content examples/1-content.jpg --style examples/1-style.jpg --output result.jpg --iterations 2000
+python3 trainer.py --content examples/1-content.jpg --style examples/1-style.jpg --output result.jpg --iterations 2000  --reshape
 ```
 
 ![output](examples/1-myoutput.jpg)
 
-### Example Otaru
-This example image is taken by me at Otaru, Japan. 
+### Example 2 Dimension Reduction
+Same as example 1 with dimension reduction on channels before calculating Gram matrix.
 ```bash
-python3 trainer.py --content examples/otaru.jpg --style examples/1-style.jpg --output result.jpg --iterations 2000
+python3 trainer.py --content examples/1-content.jpg --style examples/1-style.jpg --output result.jpg --iterations 2000  --reshape --pca
 ```
+
+![output](examples/1-output-pca.jpg)
 
 ## Requirements
 
