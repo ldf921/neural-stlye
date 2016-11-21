@@ -177,5 +177,5 @@ if __name__ == '__main__':
             os.mkdir(args.dump)
 
     model = StyleTransform(content_image, style_image, pca=args.pca)
-    model.train(args.iterations, learning_rate = 1, logging_iterations = 50, dump_image=args.dump)
+    model.train(args.iterations, learning_rate = 2, logging_iterations = 50, dump_image=args.dump)
     model.export(args.output)
