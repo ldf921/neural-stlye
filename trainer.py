@@ -5,6 +5,7 @@ import numpy as np
 import logging
 import argparse
 from sklearn.decomposition import PCA
+import os
 
 class TensorPCA(PCA):
     def transform_tensor(self, X):
@@ -24,8 +25,8 @@ class StyleTransform:
 
     content_layer = 'relu4_2'
     style_layers = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')
-    kwargs_list = ('loss_weight')
-    pca = True
+    kwargs_list = ('loss_weight', 'pca')
+    pca = False
     loss_weight = {
         'content' : 1,
         'style' : 50,
@@ -76,7 +77,8 @@ class StyleTransform:
             self.subloss['content'] = self.opr_l2_loss(generate_content_feat - content_feat) / tf.cast(tf.shape(content_feat)[3], tf.float32)
 
             generate_style_feats = [ self.opr_gram(net[layer], layer) for layer in self.style_layers]
-            self.subloss['style'] = sum( map(lambda x, y: self.opr_l2_loss(x - y, normed=True), generate_style_feats, style_feats) )
+            feature_map_sizes = [ self.opr_map_size(net[layer]) for layer in self.style_layers]
+            self.subloss['style'] = sum( map(lambda x, y, s: self.opr_l2_loss(x - y, normed=True) * s, generate_style_feats, style_feats, feature_map_sizes) )
 
             self.subloss['regular'] = self.opr_l2_loss(image[:, 1 :] - image[:, :-1]) + self.opr_l2_loss(image[:, :, 1:] - image[:, :, :-1])
 
@@ -100,19 +102,26 @@ class StyleTransform:
         return vgg.unprocess(image, self.mean_pixel)[0]
 
     def opr_gram(self, vin, layer):
-
         vin = tf.reshape(vin, [-1, tf.shape(vin)[3] ] )
         if layer in self.style_feat_pca:
             vin = self.style_feat_pca[layer].transform_tensor(vin)
-        
-        vout = tf.matmul(vin, vin, transpose_a=True)
+            vout = tf.matmul(vin, vin, transpose_a=True) / tf.cast(tf.shape(vin)[0], tf.float32)
+            vout = vout - tf.diag(tf.diag_part(vout))
+        else:
+            vout = tf.matmul(vin, vin, transpose_a=True) / tf.cast(tf.shape(vin)[0], tf.float32)
         return vout
+
+    def opr_map_size(self, vin):
+        ''' vin : [1, H, W, C]
+        '''
+        shape = tf.shape(vin)
+        return tf.cast(shape[1] * shape[2], tf.float32)
 
     def opr_l2_loss(self, vin, normed=False):
         reduce_opr = tf.reduce_mean if normed else tf.reduce_sum
         return reduce_opr(vin ** 2)
 
-    def train(self, num_iterations, learning_rate = 1, logging_iterations = 10, dump_image = False):
+    def train(self, num_iterations, learning_rate = 1, logging_iterations = 10, dump_image = None):
         logging.info('Start training with learing_rate = {}'.format(learning_rate))
 
         for i in range(num_iterations):
@@ -124,8 +133,8 @@ class StyleTransform:
                 subloss_str = ', '.join(['%s = %.4e' % (k, subloss[k]) for k in ['content', 'style', 'regular']])
 
                 logging.debug('Iteration %d / %d: %s' % (i + 1, num_iterations, subloss_str) )
-                if dump_image:
-                    self.export('img2/result-%d.jpg' % (i + 1))
+                if dump_image is not None:
+                    self.export(os.path.join(dump_image, 'result-%d.jpg') % (i + 1))
 
     def export(self, filename):
         image = self.sess.run(self.output)
@@ -133,7 +142,7 @@ class StyleTransform:
         image = np.clip(image, 0, 255).astype(np.uint8)
         imsave(filename, image)
 
-def reshape(image, short_edge = 600):
+def reshape(image, short_edge = 500):
     height, width = image.shape[:2]
     fraction = float(short_edge) / min(height, width)
     return imresize(image, fraction, interp='cubic')
@@ -148,7 +157,8 @@ if __name__ == '__main__':
     parser.add_argument('--output', type=str, default='result.jpg')
     parser.add_argument('--iterations', type=int, default=2000)
     parser.add_argument('--reshape', action='store_true')
-    parser.add_argument('--dump', action='store_true')
+    parser.add_argument('--dump', type=str, default=None)
+    parser.add_argument('--pca', action='store_true')
 
     args = parser.parse_args()
 
@@ -162,6 +172,10 @@ if __name__ == '__main__':
         content_image = reshape(content_image)
         style_image = reshape(style_image)
 
-    model = StyleTransform(content_image, style_image)
-    model.train(args.iterations, learning_rate = 2, logging_iterations = 50, dump_image=args.dump)
+    if args.dump is not None:
+        if not os.path.exists(args.dump):
+            os.mkdir(args.dump)
+
+    model = StyleTransform(content_image, style_image, pca=args.pca)
+    model.train(args.iterations, learning_rate = 1, logging_iterations = 50, dump_image=args.dump)
     model.export(args.output)
