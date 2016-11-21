@@ -9,7 +9,7 @@ This project follows the [implmentation](https://github.com/anishathalye/neural-
 ### Example 1
 This example image is provided by Anish Athalye.
 ```bash
-python3 trainer.py --content examples/1-content.jpg --style examples/1-style.jpg --output result.jpg --iterations 2000
+python3 trainer.py --content examples/1-content.jpg --style examples/1-style.jpg --output result.jpg --iterations 2000  --reshape
 ```
 
 ![output](examples/1-myoutput.jpg)
