@@ -20,7 +20,7 @@ Same as example 1 with dimension reduction on channels before calculating Gram m
 python3 trainer.py --content examples/1-content.jpg --style examples/1-style.jpg --output result.jpg --iterations 2000  --reshape --pca
 ```
 
-![output](examples/1-myoutput-pca.jpg)
+![output](examples/1-output-pca.jpg)
 
 ## Requirements
 
